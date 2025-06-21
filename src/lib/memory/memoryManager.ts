@@ -150,6 +150,65 @@ export class AdvancedMemoryManager {
     }
   }
 
+  /**
+   * Generate comprehensive user insights from stored memories
+   */
+  async generateUserInsights(): Promise<UserLearningInsights> {
+    const allMemories = await this.getAllMemories();
+    
+    // Extract patterns from workflow memories
+    const workflowMemories = allMemories.filter(m => m.type === 'workflow_pattern');
+    const patterns = workflowMemories
+      .filter(m => m.metadata.tags.includes('positive'))
+      .map(m => m.content)
+      .slice(0, 10); // Top 10 patterns
+
+    // Extract user preferences
+    const preferenceMemories = allMemories.filter(m => m.type === 'user_preference');
+    const preferences = preferenceMemories
+      .map(m => m.content)
+      .slice(0, 10); // Top 10 preferences
+
+    // Generate suggestions based on patterns
+    const suggestions = [
+      "Consider using more specific commands for better results",
+      "Try setting up automation for frequently used tasks",
+      "Explore new features based on your usage patterns"
+    ];
+
+    // Find automation opportunities
+    const frequentCommands = this.extractFrequentCommands(allMemories);
+    const automationOpportunities = frequentCommands.map(cmd => 
+      `Automate "${cmd}" based on usage frequency`
+    );
+
+    return {
+      patterns,
+      preferences,
+      suggestions,
+      automationOpportunities
+    };
+  }
+
+  /**
+   * Extract frequently used commands from memory
+   */
+  private extractFrequentCommands(memories: MemoryEntry[]): string[] {
+    const commandCounts: { [key: string]: number } = {};
+    
+    memories.forEach(memory => {
+      if (memory.metadata.tags.includes('command')) {
+        const command = memory.content.split(' ')[0];
+        commandCounts[command] = (commandCounts[command] || 0) + 1;
+      }
+    });
+
+    return Object.entries(commandCounts)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 5)
+      .map(([cmd]) => cmd);
+  }
+
   // Private helper methods
   private generateMemoryId(): string {
     return `mem_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

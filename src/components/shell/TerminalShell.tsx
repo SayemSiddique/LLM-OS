@@ -259,6 +259,7 @@ Type 'help' for commands or just talk naturally to the AI.`,
       default: return '>';
     }
   };
+
   // Command processing function
   const processCommand = async (command: string): Promise<{ handled: boolean; output: string }> => {
     const [cmd, ...args] = command.split(' ');
@@ -321,10 +322,10 @@ ${filteredCommands.map(c => `  ${c.command.padEnd(15)} - ${c.description}`).join
 🤖 Automation Opportunities: ${insights.automationOpportunities.length}
 
 🔍 Recent Patterns:
-${insights.patterns.slice(0, 3).map(p => `• ${p}`).join('\n')}
+${insights.patterns.slice(0, 3).map((p: string) => `• ${p}`).join('\n')}
 
 💭 Top Suggestions:
-${insights.suggestions.slice(0, 3).map(s => `• ${s}`).join('\n')}`;
+${insights.suggestions.slice(0, 3).map((s: string) => `• ${s}`).join('\n')}`;
               return { handled: true, output: memoryOutput };
               
             case 'insights':
@@ -332,10 +333,10 @@ ${insights.suggestions.slice(0, 3).map(s => `• ${s}`).join('\n')}`;
               const insightsOutput = `🧠 Detailed Memory Insights
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📈 Workflow Patterns (${fullInsights.patterns.length}):
-${fullInsights.patterns.map(p => `• ${p}`).join('\n')}
+${fullInsights.patterns.map((p: string) => `• ${p}`).join('\n')}
 
 ⚡ Automation Opportunities (${fullInsights.automationOpportunities.length}):
-${fullInsights.automationOpportunities.map(a => `• ${a}`).join('\n')}`;
+${fullInsights.automationOpportunities.map((a: string) => `• ${a}`).join('\n')}`;
               return { handled: true, output: insightsOutput };
               
             default:
@@ -353,7 +354,7 @@ ${fullInsights.automationOpportunities.map(a => `• ${a}`).join('\n')}`;
         case 'find':
           const fileResult = await systemCommandProcessor.processNaturalLanguageCommand(
             `${lowerCmd} ${args.join(' ')}`,
-            { command: lowerCmd, args, userId: 'user' }
+            { userId: 'user' }
           );
           
           if (fileResult.success) {
@@ -362,7 +363,7 @@ ${fullInsights.automationOpportunities.map(a => `• ${a}`).join('\n')}`;
               command,
               fileResult.output || 'File operation completed',
               'positive',
-              { commandType: 'file_operation' }
+              { userId: 'user' }
             );
           }
           
@@ -379,7 +380,7 @@ ${fullInsights.automationOpportunities.map(a => `• ${a}`).join('\n')}`;
           const networkCmd = lowerCmd === 'network' ? `network ${args.join(' ')}` : `ping ${args.join(' ')}`;
           const networkResult = await systemCommandProcessor.processNaturalLanguageCommand(
             networkCmd,
-            { command: lowerCmd, args, userId: 'user' }
+            { userId: 'user' }
           );
           
           return { 
@@ -395,7 +396,7 @@ ${fullInsights.automationOpportunities.map(a => `• ${a}`).join('\n')}`;
           const processCmd = lowerCmd === 'processes' ? 'list processes' : `kill process ${args.join(' ')}`;
           const processResult = await systemCommandProcessor.processNaturalLanguageCommand(
             processCmd,
-            { command: lowerCmd, args, userId: 'user' }
+            { userId: 'user' }
           );
           
           return { 
@@ -429,7 +430,7 @@ ${fullInsights.automationOpportunities.map(a => `• ${a}`).join('\n')}`;
           await memoryManager.storeMemory(
             `User launched application: ${appName}`,
             'user_preference',
-            { userId: 'user', action: 'app_launch' },
+            { userId: 'user' },
             ['app_usage', appName]
           );
           
@@ -467,7 +468,7 @@ ${fullInsights.automationOpportunities.map(a => `• ${a}`).join('\n')}`;
           await memoryManager.storeMemory(
             `User feedback: ${feedback}`,
             'user_preference',
-            { userId: 'user', context },
+            { userId: 'user' },
             ['user_feedback', 'learning']
           );
           
@@ -501,6 +502,40 @@ ${currentActions.map(action =>
           }
           return { handled: true, output: '💡 Use Ctrl+C to close terminal or navigate away.' };
 
+        // Agent command processing
+        case 'agent':
+          if (args.length < 1) {
+            return { handled: true, output: '💡 Usage: agent <task-description>\n🤖 Example: agent "analyze this codebase and suggest improvements"' };
+          }
+          
+          const taskDescription = args.join(' ');
+            try {
+            // Execute agent task using orchestrator
+            const agentResult = await agentOrchestrator.current.executeTask(
+              taskDescription,
+              [`User session: ${currentSession?.id || 'default'}`, `Autonomy level: ${autonomyLevel}`]
+            );
+
+            // Add to current actions for tracking
+            setCurrentActions(prev => [...prev, {
+              id: `agent-${Date.now()}`,
+              type: 'agent_task',
+              title: `Agent Task: ${taskDescription.substring(0, 50)}...`,
+              description: taskDescription,
+              status: 'executing'
+            }]);
+
+            return { 
+              handled: true, 
+              output: `🤖 Agent task initiated: "${taskDescription}"\n📋 Agents are working on this task...\n\n${agentResult.response}` 
+            };
+          } catch (error) {
+            return { 
+              handled: true, 
+              output: `❌ Failed to create agent task: ${error instanceof Error ? error.message : 'Unknown error'}` 
+            };
+          }
+
         // If not a system command, try natural language processing with system command processor
         default:
           // Try processing as natural language system command
@@ -515,7 +550,7 @@ ${currentActions.map(action =>
               command,
               naturalResult.output,
               'positive',
-              { commandType: 'natural_language' }
+              { userId: 'user' }
             );
             
             return { handled: true, output: naturalResult.output };
@@ -526,265 +561,10 @@ ${currentActions.map(action =>
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error occurred';
-      return { handled: true, output: `❌ Command Error: ${errorMsg}` };    }
-  };
-
-  const extractAndExecuteActions = async (aiResponse: string, userInput: string): Promise<ExecutionAction[]> => {
-        if (!args[0]) {
-          return { handled: true, output: 'Usage: search <query>' };
-        }
-        const query = args.join(' ');
-        
-        // Create search action
-        const searchAction = createNetworkAction(
-          'https://api.search.example.com',
-          'GET',
-          `Searching web for: ${query}`,
-          autonomyLevel
-        );
-        
-        if (searchAction.requiresApproval) {
-          return { handled: true, output: `🔍 Web search request sent for approval: "${query}"` };
-        }
-        
-        // Execute search
-        try {
-          const response = await fetch('/api/tools/search', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query, maxResults: 5 })
-          });
-          const results = await response.json();
-          
-          if (results.results && results.results.length > 0) {
-            const output = `🔍 Search Results for "${query}":
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${results.results.map((result: any, i: number) => 
-  `${i + 1}. ${result.title}
-   ${result.snippet}
-   🔗 ${result.url}`
-).join('\n\n')}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Found ${results.totalResults} results in ${results.searchTime}s`;
-            
-            completeAction(searchAction.id, { results: results.results });
-            return { handled: true, output };
-          } else {
-            failAction(searchAction.id, 'No results found');
-            return { handled: true, output: `❌ No results found for "${query}"` };
-          }
-        } catch (error) {
-          failAction(searchAction.id, error instanceof Error ? error.message : 'Search failed');
-          return { handled: true, output: `❌ Search failed: ${error}` };
-        }
-
-      case 'ls':
-      case 'dir':
-        const path = args[0] || './';
-        const listAction = createFileAction(
-          path,
-          'list',
-          `Listing directory: ${path}`,
-          autonomyLevel
-        );
-        
-        if (listAction.requiresApproval) {
-          return { handled: true, output: `📁 Directory list request sent for approval: ${path}` };
-        }
-        
-        try {
-          const response = await fetch('/api/tools/filesystem', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ path, operation: 'list' })
-          });
-          const result = await response.json();
-          
-          if (result.success && result.data.items) {
-            const output = `📁 Directory listing for ${path}:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${result.data.items.map((item: any) => 
-  `${item.type === 'directory' ? '📁' : '📄'} ${item.name}`
-).join('\n')}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Total: ${result.data.items.length} items`;
-            
-            completeAction(listAction.id, { items: result.data.items });
-            return { handled: true, output };
-          } else {
-            failAction(listAction.id, 'Failed to list directory');
-            return { handled: true, output: `❌ Failed to list directory: ${result.error || 'Unknown error'}` };
-          }
-        } catch (error) {
-          failAction(listAction.id, error instanceof Error ? error.message : 'List failed');
-          return { handled: true, output: `❌ Directory listing failed: ${error}` };
-        }
-
-      case 'cat':
-      case 'read':
-        if (!args[0]) {
-          return { handled: true, output: 'Usage: cat <filename>' };
-        }
-        const filename = args[0];
-        const readAction = createFileAction(
-          filename,
-          'read',
-          `Reading file: ${filename}`,
-          autonomyLevel
-        );
-        
-        if (readAction.requiresApproval) {
-          return { handled: true, output: `📄 File read request sent for approval: ${filename}` };
-        }
-        
-        try {
-          const response = await fetch('/api/tools/filesystem', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ path: filename, operation: 'read' })
-          });
-          const result = await response.json();
-          
-          if (result.success) {
-            const content = result.data.data;
-            const preview = content.length > 1000 ? content.substring(0, 1000) + '...' : content;
-            const output = `📄 File contents: ${filename}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${preview}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Size: ${result.data.size} characters`;
-            
-            completeAction(readAction.id, { content, size: result.data.size });
-            return { handled: true, output };
-          } else {
-            failAction(readAction.id, 'Failed to read file');
-            return { handled: true, output: `❌ Failed to read file: ${result.error || 'Unknown error'}` };
-          }
-        } catch (error) {
-          failAction(readAction.id, error instanceof Error ? error.message : 'Read failed');
-          return { handled: true, output: `❌ File read failed: ${error}` };
-        }
-
-      case 'write':
-      case 'echo':
-        if (args.length < 2) {
-          return { handled: true, output: 'Usage: write <filename> <content>' };
-        }
-        const writeFilename = args[0];
-        const content = args.slice(1).join(' ');
-        const writeAction = createFileAction(
-          writeFilename,
-          'write',
-          `Writing to file: ${writeFilename}`,
-          autonomyLevel
-        );
-        
-        if (writeAction.requiresApproval) {
-          return { handled: true, output: `📝 File write request sent for approval: ${writeFilename}` };
-        }
-        
-        try {
-          const response = await fetch('/api/tools/filesystem', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              path: writeFilename, 
-              operation: 'write', 
-              content,
-              options: { backup: true }
-            })
-          });
-          const result = await response.json();
-          
-          if (result.success) {
-            completeAction(writeAction.id, { path: writeFilename, size: content.length });
-            return { handled: true, output: `✅ Successfully wrote ${content.length} characters to ${writeFilename}` };
-          } else {
-            failAction(writeAction.id, 'Failed to write file');
-            return { handled: true, output: `❌ Failed to write file: ${result.error || 'Unknown error'}` };
-          }
-        } catch (error) {
-          failAction(writeAction.id, error instanceof Error ? error.message : 'Write failed');
-          return { handled: true, output: `❌ File write failed: ${error}` };
-        }
-
-      case 'execute':
-      case 'run':
-        if (args.length < 2) {
-          return { handled: true, output: 'Usage: execute <language> <code>' };
-        }
-        const language = args[0];
-        const code = args.slice(1).join(' ');
-          const executeAction = createTerminalAction(
-          'command',
-          `Execute ${language} code`,
-          `Running ${language} code in sandbox`,
-          { language, code },
-          autonomyLevel
-        );
-        
-        if (executeAction.requiresApproval) {
-          return { handled: true, output: `⚡ Code execution request sent for approval: ${language}` };
-        }
-        
-        try {
-          const response = await fetch('/api/tools/execute', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              language, 
-              code,
-              environment: 'sandbox',
-              timeout: 10000
-            })
-          });
-          const result = await response.json();
-          
-          if (result.success) {
-            const output = `⚡ Code Execution Result (${language}):
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📥 Input:
-${code}
-
-📤 Output:
-${result.output || 'No output'}
-
-📊 Stats:
-• Exit Code: ${result.exitCode}
-• Execution Time: ${result.executionTime}ms
-• Environment: ${result.environment}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-            
-            completeAction(executeAction.id, { 
-              output: result.output, 
-              exitCode: result.exitCode,
-              executionTime: result.executionTime 
-            });
-            return { handled: true, output };
-          } else {
-            failAction(executeAction.id, 'Code execution failed');
-            return { handled: true, output: `❌ Code execution failed: ${result.error || 'Unknown error'}` };
-          }
-        } catch (error) {
-          failAction(executeAction.id, error instanceof Error ? error.message : 'Execution failed');
-          return { handled: true, output: `❌ Code execution failed: ${error}` };
-        }
-
-      case 'memory':
-        const memoryOutput = `💾 Memory Usage:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🧠 Active Sessions:    ${messages.length} messages
-📊 Current Actions:    ${currentActions.length} processes
-🗃️  Command History:   ${messages.filter(m => m.role === 'user').length} commands
-🤖 AI Interactions:   ${messages.filter(m => m.role === 'assistant').length} responses
-📝 Context Length:     ~${JSON.stringify(messages).length} characters
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-        return { handled: true, output: memoryOutput };
-
-      default:
-        return { handled: false, output: '' };
+      return { handled: true, output: `❌ Command Error: ${errorMsg}` };
     }
   };
+
   // Extract and prepare actions from AI response
   const extractAndExecuteActions = async (aiResponse: string, userInput: string): Promise<ExecutionAction[]> => {
     const actions: ExecutionAction[] = [];
@@ -938,6 +718,7 @@ ${result.output || 'No output'}
       setCurrentActions(prev => prev.filter(a => a.status === 'executing'));
     }, 5000);
   };
+
   return (
     <div className="flex flex-col h-full bg-background border border-background-border rounded-lg overflow-hidden shadow-lg">
       {/* Enhanced Terminal Header */}
@@ -972,7 +753,9 @@ ${result.output || 'No output'}
             </motion.div>
           )}
         </div>
-      </div>      {/* Enhanced Messages Area */}
+      </div>
+
+      {/* Enhanced Messages Area */}
       <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 font-mono text-xs sm:text-sm">
         {messages.map((message) => (
           <div key={message.id} className="flex flex-col space-y-1">
@@ -1027,7 +810,9 @@ ${result.output || 'No output'}
             ))}
           </div>
         </div>
-      )}      {/* Enhanced Input Area */}
+      )}
+
+      {/* Enhanced Input Area */}
       <div className="border-t border-background-border p-3 sm:p-4 bg-background/50 backdrop-blur-sm">
         <form onSubmit={handleSubmit} className="flex items-center space-x-2 sm:space-x-3">
           <div className="flex-1 relative">
