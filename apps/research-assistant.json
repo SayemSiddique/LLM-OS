@@ -1,0 +1,68 @@
+{
+  "id": "research-assistant",
+  "name": "Research Assistant",
+  "description": "AI-powered research agent for web search, analysis, and synthesis",
+  "author": "LLM-OS Team",
+  "version": "1.0.0",
+  "icon": "Search",
+  "promptTemplate": "You are a research assistant. Research topic: {{topic}}\n\nRequirements:\n- Search depth: {{depth}}\n- Sources needed: {{sources}}\n- Focus areas: {{focus}}\n\nProvide comprehensive, well-sourced research with citations.",
+  "tools": ["web_search", "academic_search", "news_search", "document_analysis", "citation_generator"],
+  "autonomyLevels": {
+    "1": {
+      "name": "Search Suggestions",
+      "description": "Suggest search strategies and sources",
+      "permissions": ["suggest_searches", "analyze_queries"],
+      "humanApprovalRequired": true
+    },
+    "2": {
+      "name": "Guided Research",
+      "description": "Search and compile with user approval",
+      "permissions": ["web_search", "compile_results", "generate_summaries"],
+      "humanApprovalRequired": true
+    },
+    "3": {
+      "name": "Deep Research",
+      "description": "Conduct comprehensive research with oversight",
+      "permissions": ["web_search", "academic_search", "analyze_sources", "generate_reports"],
+      "humanApprovalRequired": false,
+      "maxExecutionTime": 900
+    },
+    "4": {
+      "name": "Autonomous Research",
+      "description": "Complete research projects independently",
+      "permissions": ["web_search", "academic_search", "analyze_sources", "generate_reports", "save_results"],
+      "humanApprovalRequired": false
+    }
+  },
+  "uiComponents": [
+    {
+      "type": "search_interface",
+      "props": {
+        "showFilters": true,
+        "autoSuggest": true
+      }
+    },
+    {
+      "type": "results_viewer",
+      "props": {
+        "showSources": true,
+        "allowSorting": true
+      }
+    },
+    {
+      "type": "report_editor",
+      "props": {
+        "showCitations": true,
+        "exportFormats": ["pdf", "markdown", "docx"]
+      }
+    }
+  ],
+  "metadata": {
+    "category": "research",
+    "tags": ["research", "search", "analysis", "academic"],
+    "featured": false,
+    "downloadCount": 890,
+    "rating": 4.5,
+    "compatibility": ["gpt-4", "claude-3", "gemini-pro"]
+  }
+}

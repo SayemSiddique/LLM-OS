@@ -1,0 +1,69 @@
+{
+  "id": "code-agent",
+  "name": "Code Agent",
+  "description": "Intelligent coding assistant with multi-language support and debugging capabilities",
+  "author": "LLM-OS Team",
+  "version": "1.0.0",
+  "icon": "Code",
+  "promptTemplate": "You are an expert software engineer. Help with: {{task}}\n\nLanguage: {{language}}\nContext: {{context}}\nCode: {{code}}\n\nProvide clean, efficient, and well-documented solutions.",
+  "tools": ["code_execution", "file_operations", "git_operations", "package_manager", "linter", "formatter"],
+  "autonomyLevels": {
+    "1": {
+      "name": "Code Review",
+      "description": "Analyze and suggest code improvements",
+      "permissions": ["read_code", "suggest_improvements", "run_linter"],
+      "humanApprovalRequired": true
+    },
+    "2": {
+      "name": "Code Generation",
+      "description": "Generate code snippets with approval",
+      "permissions": ["read_code", "generate_code", "run_tests"],
+      "humanApprovalRequired": true
+    },
+    "3": {
+      "name": "Development Assistant",
+      "description": "Write and modify code with oversight",
+      "permissions": ["read_code", "write_code", "run_tests", "install_packages"],
+      "humanApprovalRequired": false,
+      "maxExecutionTime": 600
+    },
+    "4": {
+      "name": "Autonomous Developer",
+      "description": "Complete development tasks independently",
+      "permissions": ["read_code", "write_code", "run_tests", "install_packages", "git_commit", "deploy"],
+      "humanApprovalRequired": false
+    }
+  },
+  "uiComponents": [
+    {
+      "type": "editor",
+      "props": {
+        "syntax": "auto-detect",
+        "lineNumbers": true,
+        "autoComplete": true
+      }
+    },
+    {
+      "type": "diff_viewer",
+      "props": {
+        "showLineNumbers": true,
+        "theme": "dark",
+        "highlightSyntax": true
+      }
+    },
+    {
+      "type": "terminal",
+      "props": {
+        "theme": "dark"
+      }
+    }
+  ],
+  "metadata": {
+    "category": "development",
+    "tags": ["coding", "programming", "debugging", "development"],
+    "featured": true,
+    "downloadCount": 2340,
+    "rating": 4.8,
+    "compatibility": ["gpt-4", "claude-3", "codellama"]
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "id": "writer-ai",
+  "name": "Writer AI",
+  "description": "Advanced writing assistant with creative and technical writing capabilities",
+  "author": "LLM-OS Team",
+  "version": "1.0.0",
+  "icon": "FileText",
+  "promptTemplate": "You are an expert writing assistant. Help the user with: {{task}}\n\nContext: {{context}}\n\nPlease provide clear, well-structured writing that matches the requested tone and style.",
+  "tools": ["web_search", "spell_check", "grammar_check", "style_analysis"],
+  "autonomyLevels": {
+    "1": {
+      "name": "Suggest Only",
+      "description": "Provide writing suggestions and improvements",
+      "permissions": ["suggest_edits", "analyze_text"],
+      "humanApprovalRequired": true
+    },
+    "2": {
+      "name": "Draft Generation",
+      "description": "Generate draft content with user approval",
+      "permissions": ["generate_content", "suggest_edits", "analyze_text"],
+      "humanApprovalRequired": true
+    },
+    "3": {
+      "name": "Content Creation",
+      "description": "Create and refine content with oversight",
+      "permissions": ["generate_content", "edit_text", "research_topics"],
+      "humanApprovalRequired": false,
+      "maxExecutionTime": 300
+    },
+    "4": {
+      "name": "Autonomous Writing",
+      "description": "Complete writing tasks independently",
+      "permissions": ["generate_content", "edit_text", "research_topics", "publish_content"],
+      "humanApprovalRequired": false
+    }
+  },
+  "uiComponents": [
+    {
+      "type": "editor",
+      "props": {
+        "syntax": "markdown",
+        "spellCheck": true
+      }
+    },
+    {
+      "type": "diff_viewer",
+      "props": {
+        "showLineNumbers": true,
+        "theme": "dark"
+      }
+    }
+  ],
+  "metadata": {
+    "category": "productivity",
+    "tags": ["writing", "content", "editing", "creative"],
+    "featured": true,
+    "downloadCount": 1520,
+    "rating": 4.7,
+    "compatibility": ["gpt-4", "claude-3", "gemini-pro"]
+  }
+}
