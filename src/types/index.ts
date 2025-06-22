@@ -183,6 +183,12 @@ export interface AgentAction {
   error?: string;
 }
 
+// Enhanced AgentAction interface with dependencies for multi-agent coordination
+export interface EnhancedAgentAction extends AgentAction {
+  dependencies?: string[];
+  priority?: number;
+}
+
 export enum AgentActionType {
   FILE_WRITE = 'file_write',
   FILE_READ = 'file_read',
