@@ -52,20 +52,16 @@ interface WelcomeOnboardingProps {
 
 export function WelcomeOnboarding({ onComplete }: WelcomeOnboardingProps) {
   const [currentStep, setCurrentStep] = useState(0);
-  const [isVisible, setIsVisible] = useState(false); // Start as false to prevent hydration mismatch
+  const [isVisible, setIsVisible] = useState(true);
   const [hasCompleted, setHasCompleted] = useState(false);
   const [userProgress, setUserProgress] = useState<Record<string, boolean>>({});
-  const [isClient, setIsClient] = useState(false);
   const { setActiveView, updateAutonomyLevel } = useLLMOSStore();
 
   useEffect(() => {
-    // Set client flag to true
-    setIsClient(true);
-    
     // Check if user has seen onboarding before
     const hasSeenOnboarding = localStorage.getItem('llm-os-onboarding-completed');
-    if (!hasSeenOnboarding) {
-      setIsVisible(true);
+    if (hasSeenOnboarding) {
+      setIsVisible(false);
     }
   }, []);
 
@@ -385,7 +381,7 @@ export function WelcomeOnboarding({ onComplete }: WelcomeOnboardingProps) {
     }
   };
 
-  if (!isClient || !isVisible) return null;
+  if (!isVisible) return null;
 
   const currentStepData = steps[currentStep];
   const isLastStep = currentStep === steps.length - 1;

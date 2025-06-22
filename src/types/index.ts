@@ -94,6 +94,8 @@ export interface MessageMetadata {
   confidence?: number;
   sources?: string[];
   actions?: any[]; // Actions that were extracted/executed with this message
+  isStreaming?: boolean; // For live streaming responses
+  aiStatus?: string; // AI connection status
 }
 
 export interface ToolCall {
@@ -284,9 +286,8 @@ export interface SystemSettings {
 // Store Types (Zustand)
 export interface LLMOSStore {
   // Current session
-  currentSession: PromptSession | null;
-  // UI State
-  activeView: 'shell' | 'launcher' | 'settings' | 'dashboard' | 'enhanced-settings' | 'ai-assistant' | 'onboarding';
+  currentSession: PromptSession | null;  // UI State
+  activeView: 'shell' | 'launcher' | 'settings' | 'dashboard' | 'enhanced-settings' | 'ai-assistant' | 'onboarding' | 'advanced' | 'demo';
   sidebarCollapsed: boolean;
   
   // AI Settings
@@ -304,7 +305,7 @@ export interface LLMOSStore {
   availableModels: LLMModel[];
     // Actions
   setCurrentSession: (session: PromptSession | null) => void;
-  setActiveView: (view: 'shell' | 'launcher' | 'settings' | 'dashboard' | 'enhanced-settings' | 'ai-assistant' | 'onboarding') => void;
+  setActiveView: (view: 'shell' | 'launcher' | 'settings' | 'dashboard' | 'enhanced-settings' | 'ai-assistant' | 'onboarding' | 'advanced' | 'demo') => void;
   toggleSidebar: () => void;
   addMessage: (message: ChatMessage) => void;
   updateAutonomyLevel: (level: AutonomyLevel) => void;

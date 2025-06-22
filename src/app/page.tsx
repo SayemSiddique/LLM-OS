@@ -18,16 +18,33 @@ import { SystemDashboard } from '../components/dashboard/SystemDashboard';
 import { EnhancedSettings } from '../components/EnhancedSettings';
 import { AIAssistantPanel } from '../components/ai/AIAssistantPanel';
 import { WelcomeOnboarding } from '../components/onboarding/WelcomeOnboarding';
+import { AdvancedFeaturesPage } from '../components/advanced/AdvancedFeaturesPage';
+import { SplashScreen } from '../components/splash/SplashScreen';
+import { Authentication } from '../components/auth/Authentication';
+import { ProfileCreation } from '../components/profile/ProfileCreation';
+import { ProfileManagement } from '../components/profile/ProfileManagement';
+import { DemoShowcase } from '../components/demo/DemoShowcase';
+
+// App states for the complete flow
+type AppState = 'splash' | 'auth' | 'onboarding' | 'profile-creation' | 'main' | 'profile-management';
 
 export default function LLMOSPage() {
   const { activeView, setActiveView, sidebarCollapsed, toggleSidebar } = useLLMOSStore();
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [appState, setAppState] = useState<AppState>('splash');
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [isClient, setIsClient] = useState(false);
   
   // Responsive breakpoints
   const isMobile = useMediaQuery('(max-width: 768px)');
   const isTablet = useMediaQuery('(max-width: 1024px)');
   const isDesktop = useMediaQuery('(min-width: 1025px)');
+
+  // Initialize client-side state
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Auto-collapse panels on smaller screens
   useEffect(() => {
@@ -43,6 +60,78 @@ export default function LLMOSPage() {
     }
   }, [isMobile, isTablet, isDesktop, sidebarCollapsed, toggleSidebar]);
 
+  // Check for returning user (only on client side)
+  useEffect(() => {
+    if (!isClient) return;
+    
+    const savedUser = localStorage.getItem('llm-os-user');
+    const hasSeenOnboarding = localStorage.getItem('llm-os-onboarding-complete');
+    
+    if (savedUser) {
+      setUserProfile(JSON.parse(savedUser));
+      if (hasSeenOnboarding) {
+        // Skip splash for returning users
+        setTimeout(() => setAppState('main'), 2000);
+      }
+    }
+  }, [isClient]);
+
+  const handleSplashComplete = () => {
+    const savedUser = localStorage.getItem('llm-os-user');
+    if (savedUser) {
+      setAppState('main');
+    } else {
+      setAppState('auth');
+    }
+  };
+
+  const handleAuthSuccess = (user?: any) => {
+    if (user) {
+      setUserProfile(user);
+      localStorage.setItem('llm-os-user', JSON.stringify(user));
+      
+      if (user.isNewUser) {
+        setAppState('onboarding');
+      } else {
+        setAppState('main');
+      }
+    } else {
+      setAppState('onboarding');
+    }
+  };
+
+  const handleAuthSkip = () => {
+    setAppState('onboarding');
+  };
+
+  const handleOnboardingComplete = () => {
+    localStorage.setItem('llm-os-onboarding-complete', 'true');
+    
+    if (userProfile) {
+      setAppState('profile-creation');
+    } else {
+      setAppState('main');
+    }
+  };
+
+  const handleProfileCreationComplete = (profile: any) => {
+    const updatedProfile = { ...userProfile, ...profile };
+    setUserProfile(updatedProfile);
+    localStorage.setItem('llm-os-user', JSON.stringify(updatedProfile));
+    setAppState('main');
+  };
+
+  const handleProfileCreationSkip = () => {
+    setAppState('main');
+  };
+
+  const openProfileManagement = () => {
+    setAppState('profile-management');
+  };
+
+  const closeProfileManagement = () => {
+    setAppState('main');
+  };
   const contentVariants = {
     hidden: { 
       opacity: 0, 
@@ -81,6 +170,55 @@ export default function LLMOSPage() {
       transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] }
     }
   };
+  // Render different app states
+  // Don't render anything until client is ready to prevent hydration mismatch
+  if (!isClient) {
+    return null;
+  }
+
+  if (appState === 'splash') {
+    return (
+      <ToastProvider>
+        <SplashScreen onComplete={handleSplashComplete} />
+      </ToastProvider>
+    );
+  }
+
+  if (appState === 'auth') {
+    return (
+      <ToastProvider>
+        <Authentication 
+          onAuthSuccess={handleAuthSuccess}
+          onSkip={handleAuthSkip}
+        />
+      </ToastProvider>
+    );
+  }
+
+  if (appState === 'onboarding') {
+    return (
+      <ToastProvider>
+        <WelcomeOnboarding onComplete={handleOnboardingComplete} />
+      </ToastProvider>
+    );
+  }
+
+  if (appState === 'profile-creation') {
+    return (
+      <ToastProvider>
+        <ProfileCreation 
+          onComplete={handleProfileCreationComplete}
+          onSkip={handleProfileCreationSkip}
+        />
+      </ToastProvider>
+    );
+  }  if (appState === 'profile-management') {
+    return (
+      <ToastProvider>
+        <ProfileManagement onClose={closeProfileManagement} />
+      </ToastProvider>
+    );
+  }
 
   return (
     <ToastProvider>
@@ -226,6 +364,34 @@ export default function LLMOSPage() {
                       className="h-full overflow-auto"
                     >
                       <EnhancedSettings />
+                    </motion.div>
+                  )}                  {activeView === 'advanced' && (
+                    <motion.div
+                      key="advanced"
+                      variants={contentVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      className="h-full overflow-auto"
+                    >
+                      <AdvancedFeaturesPage />
+                    </motion.div>
+                  )}
+                  {activeView === 'demo' && (
+                    <motion.div
+                      key="demo"
+                      variants={contentVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      className="h-full overflow-auto"
+                    >
+                      <DemoShowcase 
+                        onRunDemo={(command) => {
+                          setActiveView('shell');
+                          // Here we could auto-execute the demo command
+                        }} 
+                      />
                     </motion.div>
                   )}
                   {activeView === 'ai-assistant' && (

@@ -11,7 +11,8 @@ import {
   Settings, 
   Home,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Sparkles
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -23,6 +24,7 @@ const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: Home },
   { id: 'shell', label: 'Terminal', icon: Terminal },
   { id: 'launcher', label: 'App Launcher', icon: Grid },
+  { id: 'advanced', label: 'Advanced Features', icon: Sparkles },
   { id: 'settings', label: 'Settings', icon: Settings },
   { id: 'enhanced-settings', label: 'Advanced Settings', icon: Sliders },
 ];

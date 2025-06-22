@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Terminal, Loader2, Bot, User, Zap, Code, FileText, Search, Cpu, Settings, Play, CheckCircle, XCircle, Clock, HardDrive, Network, Folder } from 'lucide-react';
 import { useLLMOSStore } from '@/lib/store';
 import { LLMService } from '../../lib/llm/service';
+import { liveAIService } from '../../lib/ai/liveService';
 import { AgentOrchestrator } from '../../lib/agents/orchestrator';
 import { EnhancedAgentOrchestrator } from '../../lib/agents/enhancedOrchestrator';
 import { systemCommandProcessor } from '../../lib/system/osCommands';
@@ -251,31 +252,74 @@ Type 'help' for commands or just talk naturally to the AI.`,
         If the user's request involves system operations, app launching, file management, or complex tasks, 
         either execute them (if autonomy allows) or explain exactly what you would do.
         
-        Be helpful, concise, and actionable. Show system understanding.`;
-
-      const result = await llmService.current.sendMessage(
-        currentInput,
-        context,
-        systemPrompt
-      );
+        Be helpful, concise, and actionable. Show system understanding.`;      // Use live AI service for enhanced responses
+      const contextHistory = messages.slice(-5).map(m => m.content);
+      let aiResponse: string;
+      
+      try {
+        // Check if this is a streaming request
+        if (currentInput.toLowerCase().includes('stream') || currentInput.toLowerCase().includes('live')) {
+          // Use streaming response
+          aiResponse = '';
+          await liveAIService.streamChat(
+            currentInput,
+            contextHistory,
+            (chunk) => {
+              aiResponse = chunk;
+              // Update the latest message in real-time
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMessage = newMessages[newMessages.length - 1];
+                if (lastMessage && lastMessage.role === 'assistant') {
+                  lastMessage.content = chunk;
+                } else {
+                  newMessages.push({
+                    id: (Date.now() + 1).toString(),
+                    role: 'assistant',
+                    content: chunk,
+                    timestamp: new Date(),
+                    metadata: {
+                      model: 'gpt-4-live',
+                      tokens: chunk.length,
+                      processingTime: 0,
+                      isStreaming: true
+                    }
+                  });
+                }
+                return newMessages;
+              });
+            }
+          );
+        } else {
+          // Use standard response
+          aiResponse = await liveAIService.chat(currentInput, contextHistory);
+        }
+      } catch (error) {
+        console.error('Live AI error:', error);
+        aiResponse = "I apologize, but I'm experiencing technical difficulties. Please try again or use the demo commands like 'help', 'status', or 'create a React component'.";
+      }
       
       // Process AI response for potential actions
-      const actions = await extractAndExecuteActions(result.content, currentInput);
+      const actions = await extractAndExecuteActions(aiResponse, currentInput);
       
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: result.content,
+        content: aiResponse,
         timestamp: new Date(),
         metadata: {
-          model: result.model,
-          tokens: result.tokens,
+          model: liveAIService.isApiConnected() ? 'gpt-4-live' : 'demo-mode',
+          tokens: aiResponse.length,
           processingTime: 0,
           actions: actions.length > 0 ? actions : undefined,
+          aiStatus: liveAIService.getDemoModeStatus()
         }
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      // Only add message if not already added by streaming
+      if (!currentInput.toLowerCase().includes('stream') && !currentInput.toLowerCase().includes('live')) {
+        setMessages(prev => [...prev, assistantMessage]);
+      }
 
       // Execute actions based on autonomy level
       if (actions.length > 0) {
@@ -1040,19 +1084,18 @@ ${multiAgentResult.response}
             <div className="w-2 h-2 sm:w-3 sm:h-3 bg-yellow-500 rounded-full"></div>
             <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-500 rounded-full"></div>
           </div>
-          <Terminal className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-          <span className="text-xs sm:text-sm font-medium text-text-primary">
+          <Terminal className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />          <span className="text-xs sm:text-sm font-medium text-foreground">
             {isAppSession ? `${currentSession?.appId} App` : 'LLM-OS Terminal'}
           </span>
           {isAppSession && (
-            <span className="hidden sm:inline text-xs text-text-secondary bg-primary/20 px-2 py-1 rounded">
+            <span className="hidden sm:inline text-xs text-foreground-muted bg-primary/20 px-2 py-1 rounded">
               App Session
             </span>
           )}
         </div>
         
         <div className="flex items-center space-x-1 sm:space-x-2">
-          <span className="text-xs text-text-secondary">
+          <span className="text-xs text-foreground-muted">
             {messages.length} msg{messages.length !== 1 ? 's' : ''}
           </span>
           {isLoading && (
@@ -1099,35 +1142,30 @@ ${multiAgentResult.response}
       )}
 
       {/* Enhanced Messages Area */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 font-mono text-xs sm:text-sm">
-        {messages.map((message) => (
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 font-mono text-xs sm:text-sm">        {messages.map((message) => (
           <div key={message.id} className="flex flex-col space-y-1">
-            <div className="flex items-center justify-between text-xs text-gray-500">
+            <div className="flex items-center justify-between text-xs text-foreground-muted">
               <span className={`${getRoleColor(message.role)} font-medium`}>
                 {getRolePrefix(message.role)}
               </span>
               <span>{formatTimestamp(message.timestamp)}</span>
             </div>
-            <div className="pl-4 whitespace-pre-wrap leading-relaxed">
+            <div className="pl-4 whitespace-pre-wrap leading-relaxed text-foreground">
               {message.content}
             </div>
           </div>
-        ))}
-
-        {isLoading && (
-          <div className="flex items-center space-x-2 text-gray-400">
+        ))}        {isLoading && (
+          <div className="flex items-center space-x-2 text-foreground-muted">
             <Loader2 className="w-4 h-4 animate-spin" />
             <span className="text-sm">Processing...</span>
           </div>
         )}
 
         <div ref={messagesEndRef} />
-      </div>
-
-      {/* Active Actions Display */}
+      </div>      {/* Active Actions Display */}
       {currentActions.length > 0 && (
-        <div className="border-t border-llm-light p-4 bg-llm-dark/50">
-          <h3 className="text-sm font-semibold text-gray-300 mb-2 flex items-center">
+        <div className="border-t border-background-border p-4 bg-background-secondary/50">
+          <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center">
             <Cpu className="w-4 h-4 mr-2" />
             Active Processes
           </h3>
@@ -1158,14 +1196,13 @@ ${multiAgentResult.response}
       {/* Enhanced Input Area */}
       <div className="border-t border-background-border p-3 sm:p-4 bg-background/50 backdrop-blur-sm">
         <form onSubmit={handleSubmit} className="flex items-center space-x-2 sm:space-x-3">
-          <div className="flex-1 relative">
-            <input
+          <div className="flex-1 relative">            <input
               ref={inputRef}
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Enter command or query..."
-              className="w-full bg-input border border-input-border rounded-lg px-3 py-2 sm:px-4 sm:py-3 font-mono text-xs sm:text-sm text-text-primary placeholder-text-secondary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+              className="w-full bg-background-card border border-background-border rounded-lg px-3 py-2 sm:px-4 sm:py-3 font-mono text-xs sm:text-sm text-foreground placeholder-foreground-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
               disabled={isLoading}
             />
           </div>
@@ -1176,11 +1213,10 @@ ${multiAgentResult.response}
           >
             <Send className="w-3 h-3 sm:w-4 sm:h-4" />
           </button>
-        </form>
-        <div className="mt-2 text-xs text-text-secondary font-mono hidden sm:block">
+        </form>        <div className="mt-2 text-xs text-foreground-muted font-mono hidden sm:block">
           Press Enter to send • Try: "search for X", "create a file", "analyze this code"
         </div>
-        <div className="mt-1 text-xs text-text-secondary font-mono sm:hidden">
+        <div className="mt-1 text-xs text-foreground-muted font-mono sm:hidden">
           Try: "search", "help", "status"
         </div>
       </div>
