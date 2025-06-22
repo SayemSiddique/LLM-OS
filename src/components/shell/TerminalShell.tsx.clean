@@ -6,11 +6,8 @@ import { Send, Terminal, Loader2, Bot, User, Zap, Code, FileText, Search, Cpu, S
 import { useLLMOSStore } from '@/lib/store';
 import { LLMService } from '../../lib/llm/service';
 import { AgentOrchestrator } from '../../lib/agents/orchestrator';
-import { EnhancedAgentOrchestrator } from '../../lib/agents/enhancedOrchestrator';
 import { systemCommandProcessor } from '../../lib/system/osCommands';
 import { memoryManager } from '../../lib/memory/memoryManager';
-import { contextualEngine } from '../../lib/intelligence/contextualEngine';
-import { adaptiveLearningSystem } from '../../lib/intelligence/adaptiveLearning';
 import { ChatMessage } from '../../types';
 import { 
   actionEventSystem, 
@@ -64,15 +61,13 @@ const TERMINAL_COMMANDS: TerminalCommand[] = [
   { command: 'cp', description: 'Copy files or directories', usage: 'cp <source> <destination>', category: 'files' },
   { command: 'mv', description: 'Move/rename files or directories', usage: 'mv <source> <destination>', category: 'files' },
   { command: 'find', description: 'Search for files and directories', usage: 'find <pattern> [path]', category: 'files' },
-    // AI Features
+  
+  // AI Features
   { command: 'ask', description: 'Ask AI a question', usage: 'ask <question>', category: 'ai' },
   { command: 'analyze', description: 'Analyze code or text', usage: 'analyze <content>', category: 'ai' },
   { command: 'generate', description: 'Generate code or content', usage: 'generate <description>', category: 'ai' },
   { command: 'search', description: 'Search web or local content', usage: 'search <query>', category: 'ai' },
   { command: 'learn', description: 'Learn from user feedback', usage: 'learn <feedback> [context]', category: 'ai' },
-  { command: 'insights', description: 'Show AI learning insights', usage: 'insights', category: 'ai' },
-  { command: 'patterns', description: 'Show detected workflow patterns', usage: 'patterns', category: 'ai' },
-  { command: 'suggestions', description: 'Get personalized suggestions', usage: 'suggestions', category: 'ai' },
   
   // Agent Commands
   { command: 'agent', description: 'Create AI agent task', usage: 'agent <task-description>', category: 'agents' },
@@ -99,16 +94,11 @@ Type 'help' for commands or just talk naturally to the AI.`,
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [currentActions, setCurrentActions] = useState<ExecutionAction[]>([]);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const llmService = useRef(new LLMService());
   const agentOrchestrator = useRef(new AgentOrchestrator());
-  const enhancedOrchestrator = useRef(new EnhancedAgentOrchestrator());
-
-  // Phase 2: Intelligence state management
-  const [contextualSession, setContextualSession] = useState<string | null>(null);
-  const [userInsights, setUserInsights] = useState<any[]>([]);
-  const [smartSuggestions, setSmartSuggestions] = useState<string[]>([]);
 
   const { autonomyLevel, setActiveView, currentSession } = useLLMOSStore();
 
@@ -144,47 +134,16 @@ Type 'help' for commands or just talk naturally to the AI.`,
       role: 'user',
       content: input.trim(),
       timestamp: new Date(),
-    };    setMessages(prev => [...prev, userMessage]);
+    };
+
+    setMessages(prev => [...prev, userMessage]);
     const currentInput = input.trim();
     setInput('');
     setIsLoading(true);
 
-    // Initialize intent analysis variable
-    let intentAnalysis: any = { intent: 'general', domain: 'terminal', complexity: 'simple', confidence: 0.5 };
-
     try {
-      // Phase 2: Intelligence Processing - Contextual Understanding & Learning
-      let sessionId = contextualSession;
-      if (!sessionId) {
-        const session = await contextualEngine.createSession('user', currentInput, 'terminal');
-        sessionId = session.id;
-        setContextualSession(sessionId);
-      }      // Analyze user intent and extract context
-      intentAnalysis = await contextualEngine.analyzeIntent(currentInput, 'user');
-        // Store interaction in memory for learning
-      await memoryManager.learnFromInteraction(
-        currentInput,
-        `User input with intent: ${intentAnalysis.intent}`,
-        'neutral',
-        { userId: 'user' }
-      );
-
-      // Get personalized suggestions based on learning
-      const personalizedSuggestions = await adaptiveLearningSystem.generatePersonalizedSuggestions('user', {
-        currentTask: currentInput,
-        workingDomain: intentAnalysis.domain
-      });
-      setSmartSuggestions(personalizedSuggestions.map(s => s.title).slice(0, 3));
-
-      // Update user insights
-      const insights = await memoryManager.generateUserInsights();
-      setUserInsights([
-        `Intent: ${intentAnalysis.intent} (${intentAnalysis.confidence}% confidence)`,
-        `Domain: ${intentAnalysis.domain}`,
-        `Complexity: ${intentAnalysis.complexity}`,
-        ...insights.suggestions.slice(0, 2)
-      ]);      // First, check if this is a system command
-      const commandResult = await processCommand(currentInput, intentAnalysis);
+      // First, check if this is a system command
+      const commandResult = await processCommand(currentInput);
       if (commandResult.handled) {
         const systemMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
@@ -302,7 +261,7 @@ Type 'help' for commands or just talk naturally to the AI.`,
   };
 
   // Command processing function
-  const processCommand = async (command: string, intentAnalysis?: any): Promise<{ handled: boolean; output: string }> => {
+  const processCommand = async (command: string): Promise<{ handled: boolean; output: string }> => {
     const [cmd, ...args] = command.split(' ');
     const lowerCmd = cmd.toLowerCase();
 
@@ -512,57 +471,8 @@ ${fullInsights.automationOpportunities.map((a: string) => `• ${a}`).join('\n')
             { userId: 'user' },
             ['user_feedback', 'learning']
           );
-            return { handled: true, output: `🧠 Learned: "${feedback}" in context "${context}"\n✨ This will improve future interactions!` };
-
-        // Phase 2: Advanced Intelligence Commands
-        case 'insights':
-          const insights = await memoryManager.generateUserInsights();
-          const insightsOutput = `🧠 AI Learning Insights
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📊 Detected Patterns: ${insights.patterns.length}
-⚙️  User Preferences: ${insights.preferences.length}  
-💡 Smart Suggestions: ${insights.suggestions.length}
-🤖 Automation Opportunities: ${insights.automationOpportunities.length}
-
-🔍 Recent Learning:
-${insights.patterns.slice(0, 3).map((p: string) => `• ${p}`).join('\n')}
-
-💭 Personalized Suggestions:
-${insights.suggestions.slice(0, 3).map((s: string) => `• ${s}`).join('\n')}`;
-          return { handled: true, output: insightsOutput };
-
-        case 'patterns':
-          const userPatterns = await adaptiveLearningSystem.analyzeWorkflowPatterns('user', [command]);
-          const patternsOutput = `🔄 Detected Workflow Patterns
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${userPatterns.length > 0 
-  ? userPatterns.map(pattern => 
-      `📋 ${pattern.name}
-   Description: ${pattern.description}
-   Steps: ${pattern.steps.length}
-   Frequency: ${pattern.frequency}
-   Confidence: ${Math.round(pattern.confidence * 100)}%
-   Domain: ${pattern.domain}`
-    ).join('\n\n')
-  : '🔍 No patterns detected yet. Use the system more to discover patterns!'}`;
-          return { handled: true, output: patternsOutput };
-
-        case 'suggestions':
-          const personalizedSuggestions = await adaptiveLearningSystem.generatePersonalizedSuggestions('user', {
-            currentTask: 'Getting suggestions',
-            workingDomain: 'terminal'
-          });
-          const suggestionsOutput = `💡 Personalized Suggestions
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${personalizedSuggestions.length > 0
-  ? personalizedSuggestions.slice(0, 5).map(s => 
-      `${s.type === 'command' ? '⚡' : s.type === 'workflow' ? '🔄' : '💡'} ${s.title}
-   ${s.description}
-   Relevance: ${Math.round(s.relevanceScore * 100)}% | Difficulty: ${s.difficulty}
-   ${s.suggestedAction ? `Action: ${s.suggestedAction}` : ''}`
-    ).join('\n\n')
-  : '🤖 Keep using the system to get personalized suggestions!'}`;
-          return { handled: true, output: suggestionsOutput };
+          
+          return { handled: true, output: `🧠 Learned: "${feedback}" in context "${context}"\n✨ This will improve future interactions!` };
 
         case 'tasks':
           const tasksOutput = currentActions.length > 0 
@@ -590,61 +500,46 @@ ${currentActions.map(action =>
             }]);
             return { handled: true, output: '' };
           }
-          return { handled: true, output: '💡 Use Ctrl+C to close terminal or navigate away.' };        // Agent command processing - Enhanced Multi-Agent Orchestration
+          return { handled: true, output: '💡 Use Ctrl+C to close terminal or navigate away.' };
+
+        // Agent command processing
         case 'agent':
           if (args.length < 1) {
             return { handled: true, output: '💡 Usage: agent <task-description>\n🤖 Example: agent "analyze this codebase and suggest improvements"' };
           }
-            const taskDescription = args.join(' ');
-          const analysis = intentAnalysis || { intent: 'general', domain: 'terminal', complexity: 'simple', confidence: 0.5 };
+          
+          const taskDescription = args.join(' ');
           
           try {
-            // Use Enhanced Orchestrator for complex task coordination
-            const multiAgentResult = await enhancedOrchestrator.current.executeTask(
-              taskDescription,
-              [`User session: ${currentSession?.id || 'default'}`, `Autonomy level: ${autonomyLevel}`, `Intent: ${analysis.intent}`],
-              {
-                priority: analysis.complexity === 'complex' ? 'high' : 'medium',
-                maxAgents: analysis.complexity === 'coordination' ? 5 : 3
+            // Create agent task using orchestrator
+            const agentTask = await agentOrchestrator.current.createTask({
+              description: taskDescription,
+              priority: 'medium',
+              maxAgents: 3,
+              timeoutMs: 300000, // 5 minutes
+              context: {
+                userId: 'user',
+                sessionId: currentSession?.id || 'default'
               }
-            );
+            });
 
             // Add to current actions for tracking
             setCurrentActions(prev => [...prev, {
-              id: multiAgentResult.taskId,
+              id: agentTask.id,
               type: 'agent_task',
-              title: `Multi-Agent Task: ${taskDescription.substring(0, 50)}...`,
+              title: `Agent Task: ${taskDescription.substring(0, 50)}...`,
               description: taskDescription,
               status: 'executing'
             }]);
 
-            // Learn from successful agent task creation
-            await memoryManager.learnFromInteraction(
-              `agent ${taskDescription}`,
-              `Successfully created multi-agent task with ${multiAgentResult.assignedAgents.length} agents`,
-              'positive',
-              { userId: 'user' }
-            );
-
             return { 
               handled: true, 
-              output: `🤖 Enhanced Multi-Agent Task Initiated
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📋 Task: "${taskDescription}"
-🎯 Task ID: ${multiAgentResult.taskId}
-� Assigned Agents: ${multiAgentResult.assignedAgents.length}
-🔄 Actions Planned: ${multiAgentResult.actions.length}
-⏱️  Estimated Completion: ${multiAgentResult.estimatedCompletion.toLocaleTimeString()}
-🧠 Intent Analysis: ${analysis.intent} (${analysis.complexity})
-
-${multiAgentResult.response}
-
-💡 Use 'tasks' to monitor progress or 'approve <task-id>' for pending actions.` 
+              output: `🤖 Agent task created: "${taskDescription}"\n📋 Task ID: ${agentTask.id}\n⏳ Agents are working on this task...` 
             };
           } catch (error) {
             return { 
               handled: true, 
-              output: `❌ Failed to create enhanced agent task: ${error instanceof Error ? error.message : 'Unknown error'}` 
+              output: `❌ Failed to create agent task: ${error instanceof Error ? error.message : 'Unknown error'}` 
             };
           }
 
@@ -864,40 +759,8 @@ ${multiAgentResult.response}
               <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
             </motion.div>
           )}
-        </div>      </div>
-
-      {/* Phase 2: Intelligence Panel */}
-      {(smartSuggestions.length > 0 || userInsights.length > 0) && (
-        <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-b border-blue-200/20 p-3">
-          <div className="flex items-center space-x-2 mb-2">
-            <Bot className="w-4 h-4 text-blue-400" />
-            <span className="text-xs font-medium text-blue-300">AI Intelligence</span>
-          </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 text-xs">
-            {userInsights.length > 0 && (
-              <div className="space-y-1">
-                <span className="text-blue-200 font-medium">Context Analysis:</span>
-                {userInsights.slice(0, 3).map((insight, i) => (
-                  <div key={i} className="text-blue-100/80 text-xs">• {insight}</div>
-                ))}
-              </div>
-            )}
-            
-            {smartSuggestions.length > 0 && (
-              <div className="space-y-1">
-                <span className="text-purple-200 font-medium">Smart Suggestions:</span>
-                {smartSuggestions.map((suggestion, i) => (
-                  <div key={i} className="text-purple-100/80 text-xs cursor-pointer hover:text-purple-100 transition-colors"
-                       onClick={() => setInput(suggestion)}>
-                    💡 {suggestion}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
-      )}
+      </div>
 
       {/* Enhanced Messages Area */}
       <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 font-mono text-xs sm:text-sm">
