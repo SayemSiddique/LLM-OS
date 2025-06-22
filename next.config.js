@@ -50,11 +50,9 @@ const nextConfig = {
       'avatars.githubusercontent.com',
       'lh3.googleusercontent.com'
     ],
-    formats: ['image/webp', 'image/avif'],
-  },
+    formats: ['image/webp', 'image/avif'],  },
 
   // Performance optimizations
-  swcMinify: true,
   compress: true,
 
   // Environment variables

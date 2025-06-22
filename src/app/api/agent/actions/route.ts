@@ -43,9 +43,7 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Missing required fields' },
         { status: 400 }
       );
-    }
-
-    const action: AgentAction = {
+    }    const action: AgentAction = {
       id: `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       sessionId,
       type: type as AgentActionType,
@@ -54,6 +52,8 @@ export async function POST(request: NextRequest) {
       status: 'pending',
       autonomyLevel: autonomyLevel || AutonomyLevel.EXECUTE_WITH_APPROVAL,
       timestamp: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
 
     pendingActions.push(action);

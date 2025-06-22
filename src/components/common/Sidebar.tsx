@@ -21,11 +21,10 @@ interface SidebarProps {
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: Home },
-  { id: 'terminal', label: 'Terminal', icon: Terminal },
+  { id: 'shell', label: 'Terminal', icon: Terminal },
   { id: 'launcher', label: 'App Launcher', icon: Grid },
-  { id: 'autonomy', label: 'Autonomy', icon: Sliders },
-  { id: 'verifier', label: 'Verifier', icon: Eye },
   { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'enhanced-settings', label: 'Advanced Settings', icon: Sliders },
 ];
 
 export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {

@@ -285,9 +285,8 @@ export interface SystemSettings {
 export interface LLMOSStore {
   // Current session
   currentSession: PromptSession | null;
-  
   // UI State
-  activeView: 'shell' | 'launcher' | 'settings';
+  activeView: 'shell' | 'launcher' | 'settings' | 'dashboard' | 'enhanced-settings' | 'ai-assistant' | 'onboarding';
   sidebarCollapsed: boolean;
   
   // AI Settings
@@ -305,7 +304,7 @@ export interface LLMOSStore {
   availableModels: LLMModel[];
     // Actions
   setCurrentSession: (session: PromptSession | null) => void;
-  setActiveView: (view: 'shell' | 'launcher' | 'settings') => void;
+  setActiveView: (view: 'shell' | 'launcher' | 'settings' | 'dashboard' | 'enhanced-settings' | 'ai-assistant' | 'onboarding') => void;
   toggleSidebar: () => void;
   addMessage: (message: ChatMessage) => void;
   updateAutonomyLevel: (level: AutonomyLevel) => void;

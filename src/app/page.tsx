@@ -12,8 +12,12 @@ import { DesignSystemShowcase } from '../components/showcase/DesignSystemShowcas
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLLMOSStore } from '../lib/store';
 import { useMediaQuery } from '../hooks/useMediaQuery';
-import { Button } from '../components/ui';
+import { Button } from '../components/ui/index';
 import { Menu, X, Eye, Settings, Terminal, Grid3X3 } from 'lucide-react';
+import { SystemDashboard } from '../components/dashboard/SystemDashboard';
+import { EnhancedSettings } from '../components/EnhancedSettings';
+import { AIAssistantPanel } from '../components/ai/AIAssistantPanel';
+import { WelcomeOnboarding } from '../components/onboarding/WelcomeOnboarding';
 
 export default function LLMOSPage() {
   const { activeView, setActiveView, sidebarCollapsed, toggleSidebar } = useLLMOSStore();
@@ -163,8 +167,7 @@ export default function LLMOSPage() {
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
               {/* Primary Content Panel */}
-              <div className="flex-1 flex flex-col min-h-0">
-                <AnimatePresence mode="wait">
+              <div className="flex-1 flex flex-col min-h-0">                <AnimatePresence mode="wait">
                   {activeView === 'shell' && (
                     <motion.div
                       key="shell"
@@ -189,6 +192,18 @@ export default function LLMOSPage() {
                       <AppLauncher />
                     </motion.div>
                   )}
+                  {activeView === 'dashboard' && (
+                    <motion.div
+                      key="dashboard"
+                      variants={contentVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      className="h-full"
+                    >
+                      <SystemDashboard />
+                    </motion.div>
+                  )}
                   {activeView === 'settings' && (
                     <motion.div
                       key="settings"
@@ -199,6 +214,42 @@ export default function LLMOSPage() {
                       className="h-full overflow-auto"
                     >
                       <DesignSystemShowcase />
+                    </motion.div>
+                  )}
+                  {activeView === 'enhanced-settings' && (
+                    <motion.div
+                      key="enhanced-settings"
+                      variants={contentVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      className="h-full overflow-auto"
+                    >
+                      <EnhancedSettings />
+                    </motion.div>
+                  )}
+                  {activeView === 'ai-assistant' && (
+                    <motion.div
+                      key="ai-assistant"
+                      variants={contentVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      className="h-full overflow-auto"
+                    >
+                      <AIAssistantPanel />
+                    </motion.div>
+                  )}
+                  {activeView === 'onboarding' && (
+                    <motion.div
+                      key="onboarding"
+                      variants={contentVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      className="h-full overflow-auto"
+                    >
+                      <WelcomeOnboarding />
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -236,13 +287,16 @@ export default function LLMOSPage() {
                         </Button>
                       </div>
                     )}
-                    
-                    {/* Autonomy Controls */}
+                      {/* Autonomy Controls */}
                     <div className="border-b border-llm-light/20 flex-shrink-0">
                       <AutonomyControls />
                     </div>
                     
-                    {/* Visual Verifier */}
+                    {/* AI Assistant Panel */}
+                    <div className="p-4 border-b border-llm-light/20 flex-shrink-0">
+                      <AIAssistantPanel />
+                    </div>
+                      {/* Visual Verifier */}
                     <div className="flex-1 min-h-0">
                       <VisualVerifier />
                     </div>
@@ -263,8 +317,7 @@ export default function LLMOSPage() {
             </div>
           </div>
         </div>
-        
-        {/* Desktop Panel Toggle Button */}
+          {/* Desktop Panel Toggle Button */}
         {isDesktop && !rightPanelOpen && (
           <motion.div
             initial={{ x: 100, opacity: 0 }}
@@ -281,6 +334,9 @@ export default function LLMOSPage() {
             </Button>
           </motion.div>
         )}
+        
+        {/* Welcome Onboarding */}
+        <WelcomeOnboarding />
       </div>
     </ToastProvider>
   );

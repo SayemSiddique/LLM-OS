@@ -27,7 +27,7 @@ export const useLLMOSStore = create<LLMOSStore>()(
       (set, get) => ({
         // State
         currentSession: null,
-        activeView: 'shell',
+        activeView: 'dashboard',
         sidebarCollapsed: false,
         autonomyLevel: AutonomyLevel.SUGGEST_ONLY,
         installedApps: [],
